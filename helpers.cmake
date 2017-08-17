@@ -193,3 +193,32 @@ function(add_cpp_tools TARGET)
       DEPENDS ${CPP_TARGETS})
   endif()
 endfunction()
+
+function(get_git_version RESULT_NAME)
+  if(EXISTS "${CMAKE_SOURCE_DIR}/.git" AND IS_DIRECTORY "${CMAKE_SOURCE_DIR}/.git")
+    cmake_parse_arguments(ARGS "" "DIFF_OUTPUT_VARIABLE;DIFF_HASH_OUTPUT_VARIABLE" "" ${ARGN})
+    find_program(HAVE_GIT git)
+    mark_as_advanced(HAVE_GIT)
+    if(HAVE_GIT)
+      execute_process(
+        COMMAND git describe --tags --dirty --always
+        OUTPUT_VARIABLE GIT_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE)
+      string(REGEX REPLACE "^v([0-9]+\\.[0-9]+)\\.(0-)?([0-9]*)((-.+)?)$" "\\1.\\3\\4" GIT_OUTPUT "${GIT_OUTPUT}")
+      set(${RESULT_NAME} ${GIT_OUTPUT} PARENT_SCOPE)
+      if(ARGS_DIFF_OUTPUT_VARIABLE)
+        message(STATUS "${ARGS_DIFF_OUTPUT_VARIABLE}") # TODO
+        execute_process(
+          COMMAND git diff HEAD --no-color
+          OUTPUT_VARIABLE GIT_DIFF
+          OUTPUT_STRIP_TRAILING_WHITESPACE)
+        set(${ARGS_DIFF_OUTPUT_VARIABLE} ${GIT_DIFF} PARENT_SCOPE)
+        if(GIT_DIFF AND ARGS_DIFF_HASH_OUTPUT_VARIABLE)
+          string(MD5 GIT_DIFF_HASH "${GIT_DIFF}")
+          string(SUBSTRING "${GIT_DIFF_HASH}" 0 12 GIT_DIFF_HASH)
+          set(${ARGS_DIFF_HASH_OUTPUT_VARIABLE} ${GIT_DIFF_HASH} PARENT_SCOPE)
+        endif()
+      endif()
+    endif()
+  endif()
+endfunction()
