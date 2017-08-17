@@ -63,84 +63,133 @@ function(get_all_compile_definitions RESULT_NAME TARGET)
   set(${RESULT_NAME} ${RESULT} PARENT_SCOPE)
 endfunction()
 
-function(add_on_source TARGET COMMAND)
-  find_program(${COMMAND}_PATH ${COMMAND})
-  if(${COMMAND}_PATH)
+function(add_on_source TARGET)
+  cmake_parse_arguments(ARGS "" "COMMAND;NAME" "ARGUMENTS" ${ARGN})
+  if(ARGS_COMMAND)
+    if(NOT ARGS_NAME)
+      set(ARGS_NAME ${TARGET}_${ARGS_COMMAND})
+    endif()
+    find_program(${ARGS_COMMAND}_PATH ${ARGS_COMMAND})
+    mark_as_advanced(${ARGS_COMMAND}_PATH)
+    if(${ARGS_COMMAND}_PATH)
+      set(ARGS)
+      set(PER_SOURCEFILE FALSE)
 
-    list(REMOVE_AT ARGV 0) # remove TARGET
-    list(REMOVE_AT ARGV 0) # remove COMMAND
-
-    set(ARGS)
-    set(PER_SOURCEFILE FALSE)
-
-    foreach(ARG ${ARGV})
-      if(${ARG} STREQUAL "INCLUDES")
-        get_all_include_directories(INCLUDE_DIRECTORIES ${TARGET})
-        if(INCLUDE_DIRECTORIES)
-          foreach(INCLUDE_DIRECTORY ${INCLUDE_DIRECTORIES})
-            set(ARGS ${ARGS} "-I${INCLUDE_DIRECTORY}")
-          endforeach()
-        endif()
-      elseif(${ARG} STREQUAL "DEFINITIONS")
-        get_all_compile_definitions(COMPILE_DEFINITIONS ${TARGET})
-        if(COMPILE_DEFINITIONS)
-          foreach(COMPILE_DEFINITION ${COMPILE_DEFINITIONS})
-            set(ARGS ${ARGS} "-D${COMPILE_DEFINITION}")
-          endforeach()
-        endif()
-      elseif(${ARG} STREQUAL "ALL_SOURCEFILES")
-        get_target_property(SOURCES ${TARGET} SOURCES)
-        set(ARGS ${ARGS} ${SOURCES})
-      elseif(${ARG} STREQUAL "SOURCEFILE")
-        set(ARGS ${ARGS} ${ARG})
-        set(PER_SOURCEFILE TRUE)
-      else()
-        set(ARGS ${ARGS} ${ARG})
-      endif()
-    endforeach()
-
-    if(PER_SOURCEFILE)
-      get_target_property(SOURCES ${TARGET} SOURCES)
-      set(COMMANDS)
-      foreach(FILE ${SOURCES})
-        set(LOCAL_ARGS)
-        foreach(ARG ${ARGS})
-          if(${ARG} STREQUAL "SOURCEFILE")
-            set(LOCAL_ARGS ${LOCAL_ARGS} ${FILE})
-          else()
-            set(LOCAL_ARGS ${LOCAL_ARGS} ${ARG})
+      foreach(ARG ${ARGS_ARGUMENTS})
+        if(${ARG} STREQUAL "INCLUDES")
+          get_all_include_directories(INCLUDE_DIRECTORIES ${TARGET})
+          if(INCLUDE_DIRECTORIES)
+            foreach(INCLUDE_DIRECTORY ${INCLUDE_DIRECTORIES})
+              set(ARGS ${ARGS} "-I${INCLUDE_DIRECTORY}")
+            endforeach()
           endif()
-        endforeach()
-        file(GLOB FILE ${FILE})
-        file(RELATIVE_PATH FILE ${CMAKE_CURRENT_SOURCE_DIR} ${FILE})
-        add_custom_command(
-          OUTPUT ${TARGET}_${COMMAND}/${FILE}
-          COMMAND ${${COMMAND}_PATH} ${LOCAL_ARGS}
-          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-          COMMENT "Running ${COMMAND} on ${FILE}..."
-          VERBATIM)
-        set_source_files_properties(${TARGET}_${COMMAND}/${FILE} PROPERTIES SYMBOLIC TRUE)
-        set(COMMANDS ${COMMANDS} ${TARGET}_${COMMAND}/${FILE})
+        elseif(${ARG} STREQUAL "DEFINITIONS")
+          get_all_compile_definitions(COMPILE_DEFINITIONS ${TARGET})
+          if(COMPILE_DEFINITIONS)
+            foreach(COMPILE_DEFINITION ${COMPILE_DEFINITIONS})
+              set(ARGS ${ARGS} "-D${COMPILE_DEFINITION}")
+            endforeach()
+          endif()
+        elseif(${ARG} STREQUAL "ALL_SOURCEFILES")
+          get_target_property(SOURCES ${TARGET} SOURCES)
+          set(ARGS ${ARGS} ${SOURCES})
+        elseif(${ARG} STREQUAL "SOURCEFILE")
+          set(ARGS ${ARGS} ${ARG})
+          set(PER_SOURCEFILE TRUE)
+        else()
+          set(ARGS ${ARGS} ${ARG})
+        endif()
       endforeach()
-      add_custom_target(
-        ${TARGET}_${COMMAND}
-        DEPENDS ${COMMANDS}
-        COMMENT "Running ${COMMAND} on ${TARGET}...")
-    else()
-      add_custom_target(
-        ${TARGET}_${COMMAND}
-        COMMAND ${${COMMAND}_PATH} ${ARGS}
-        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-        COMMENT "Running ${COMMAND} on ${TARGET}..."
-        VERBATIM)
+
+      if(PER_SOURCEFILE)
+        get_target_property(SOURCES ${TARGET} SOURCES)
+        set(COMMANDS)
+        foreach(FILE ${SOURCES})
+          set(LOCAL_ARGS)
+          foreach(ARG ${ARGS})
+            if(${ARG} STREQUAL "SOURCEFILE")
+              set(LOCAL_ARGS ${LOCAL_ARGS} ${FILE})
+            else()
+              set(LOCAL_ARGS ${LOCAL_ARGS} ${ARG})
+            endif()
+          endforeach()
+          file(GLOB FILE ${FILE})
+          file(RELATIVE_PATH FILE ${CMAKE_CURRENT_SOURCE_DIR} ${FILE})
+          add_custom_command(
+            OUTPUT ${ARGS_NAME}/${FILE}
+            COMMAND ${${ARGS_COMMAND}_PATH} ${LOCAL_ARGS}
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            COMMENT "Running ${ARGS_NAME} on ${FILE}..."
+            VERBATIM)
+          set_source_files_properties(${ARGS_NAME}/${FILE} PROPERTIES SYMBOLIC TRUE)
+          set(COMMANDS ${COMMANDS} ${ARGS_NAME}/${FILE})
+        endforeach()
+        add_custom_target(
+          ${ARGS_NAME}
+          DEPENDS ${COMMANDS}
+          COMMENT "Running ${ARGS_NAME} on ${TARGET}...")
+      else()
+        add_custom_target(
+          ${ARGS_NAME}
+          COMMAND ${${ARGS_COMMAND}_PATH} ${ARGS}
+          WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+          COMMENT "Running ${ARGS_NAME} on ${TARGET}..."
+          VERBATIM)
+      endif()
     endif()
   endif()
 endfunction()
 
 function(add_cpp_tools TARGET)
-  add_on_source(${TARGET} clang-format -i --style=file ALL_SOURCEFILES)
-  add_on_source(${TARGET} clang-tidy ALL_SOURCEFILES -- -std=c++11 INCLUDES DEFINITIONS)
-  add_on_source(${TARGET} cppcheck INCLUDES DEFINITIONS --quiet --template=gcc --enable=all ALL_SOURCEFILES)
-  add_on_source(${TARGET} cppclean INCLUDES ALL_SOURCEFILES)
-  add_on_source(${TARGET} iwyu -std=c++11 -I/usr/include/clang/3.8/include INCLUDES DEFINITIONS SOURCEFILE)
+  set(CPP_TARGETS)
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_clang_format
+    COMMAND clang-format
+    ARGUMENTS -i --style=file ALL_SOURCEFILES)
+  if(TARGET ${TARGET}_clang_format)
+    set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_clang_format)
+  endif()
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_clang_tidy
+    COMMAND clang-tidy
+    ARGUMENTS -quiet SOURCEFILE -- -std=c++11 INCLUDES DEFINITIONS)
+  if(TARGET ${TARGET}_clang_tidy)
+    set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_clang_tidy)
+  endif()
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_clang_tidy_fix
+    COMMAND clang-tidy
+    ARGUMENTS -quiet -fix -format-style=file SOURCEFILE -- -std=c++11 INCLUDES DEFINITIONS)
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_cppcheck
+    COMMAND cppcheck
+    ARGUMENTS INCLUDES DEFINITIONS --quiet --template=gcc --enable=all ALL_SOURCEFILES)
+  if(TARGET ${TARGET}_cppcheck)
+    set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_cppcheck)
+  endif()
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_cppclean
+    COMMAND cppclean
+    ARGUMENTS INCLUDES ALL_SOURCEFILES)
+  if(TARGET ${TARGET}_cppclean)
+    set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_cppclean)
+  endif()
+
+  add_on_source(${TARGET}
+    NAME ${TARGET}_iwyu
+    COMMAND iwyu
+    ARGUMENTS -std=c++11 -I/usr/include/clang/3.8/include INCLUDES DEFINITIONS SOURCEFILE)
+  if(TARGET ${TARGET}_iwyu)
+    set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_iwyu)
+  endif()
+
+  if(CPP_TARGETS)
+    add_custom_target(${TARGET}_cpp_tools
+      DEPENDS ${CPP_TARGETS})
+  endif()
 endfunction()
