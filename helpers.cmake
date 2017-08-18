@@ -23,7 +23,7 @@ function(set_advanced_cpp_warnings TARGET)
     option(CXX_WARNINGS OFF)
   endif()
   if(CXX_WARNINGS)
-    target_compile_options(acclimate PRIVATE -Wall -pedantic -Wextra -Wno-reorder)
+    target_compile_options(${TARGET} PRIVATE -Wall -pedantic -Wextra -Wno-reorder)
   endif()
 endfunction()
 
