@@ -13,6 +13,44 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+set(HELPER_MODULES_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+
+function(set_advanced_cpp_warnings TARGET)
+  if(ARGN GREATER 1)
+    option(CXX_WARNINGS ON)
+  else()
+    option(CXX_WARNINGS OFF)
+  endif()
+  if(CXX_WARNINGS)
+    target_compile_options(acclimate PRIVATE -Wall -pedantic -Wextra -Wno-reorder)
+  endif()
+endfunction()
+
+
+function(set_default_build_type BUILD_TYPE)
+  if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.8)
+    cmake_policy(SET CMP0069 NEW) # for INTERPROCEDURAL_OPTIMIZATION
+  endif()
+  if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE ${BUILD_TYPE} CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+  endif()
+endfunction()
+
+
+function(set_build_type_specifics TARGET)
+  if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo" OR CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    if(${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION} GREATER 3.8)
+      message(STATUS "Enabling interprocedural optimization")
+      set_property(TARGET ${TARGET} PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
+    target_compile_definitions(${TARGET} PUBLIC NDEBUG)
+  else()
+    target_compile_definitions(${TARGET} PRIVATE DEBUG)
+  endif()
+endfunction()
+
+
 function(get_depends_properties RESULT_NAME TARGET PROPERTIES)
   foreach(PROPERTY ${PROPERTIES})
     set(RESULT_${PROPERTY})
@@ -37,6 +75,7 @@ function(get_depends_properties RESULT_NAME TARGET PROPERTIES)
   endforeach()
 endfunction()
 
+
 function(get_all_include_directories RESULT_NAME TARGET)
   get_depends_properties(RESULT ${TARGET} "INTERFACE_INCLUDE_DIRECTORIES;INTERFACE_SYSTEM_INCLUDE_DIRECTORIES")
   set(RESULT ${RESULT_INTERFACE_INCLUDE_DIRECTORIES} ${RESULT_INTERFACE_SYSTEM_INCLUDE_DIRECTORIES})
@@ -50,6 +89,7 @@ function(get_all_include_directories RESULT_NAME TARGET)
   set(${RESULT_NAME} ${RESULT} PARENT_SCOPE)
 endfunction()
 
+
 function(get_all_compile_definitions RESULT_NAME TARGET)
   get_depends_properties(RESULT ${TARGET} "INTERFACE_COMPILE_DEFINITIONS")
   set(RESULT ${RESULT_INTERFACE_COMPILE_DEFINITIONS})
@@ -62,6 +102,7 @@ function(get_all_compile_definitions RESULT_NAME TARGET)
   endif()
   set(${RESULT_NAME} ${RESULT} PARENT_SCOPE)
 endfunction()
+
 
 function(add_on_source TARGET)
   cmake_parse_arguments(ARGS "" "COMMAND;NAME" "ARGUMENTS" ${ARGN})
@@ -114,15 +155,17 @@ function(add_on_source TARGET)
             endif()
           endforeach()
           file(GLOB FILE ${FILE})
-          file(RELATIVE_PATH FILE ${CMAKE_CURRENT_SOURCE_DIR} ${FILE})
-          add_custom_command(
-            OUTPUT ${ARGS_NAME}/${FILE}
-            COMMAND ${${ARGS_COMMAND}_PATH} ${LOCAL_ARGS}
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            COMMENT "Running ${ARGS_NAME} on ${FILE}..."
-            VERBATIM)
-          set_source_files_properties(${ARGS_NAME}/${FILE} PROPERTIES SYMBOLIC TRUE)
-          set(COMMANDS ${COMMANDS} ${ARGS_NAME}/${FILE})
+          if(FILE)
+            file(RELATIVE_PATH FILE ${CMAKE_CURRENT_SOURCE_DIR} ${FILE})
+            add_custom_command(
+              OUTPUT ${ARGS_NAME}/${FILE}
+              COMMAND ${${ARGS_COMMAND}_PATH} ${LOCAL_ARGS}
+              WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+              COMMENT "Running ${ARGS_NAME} on ${FILE}..."
+              VERBATIM)
+            set_source_files_properties(${ARGS_NAME}/${FILE} PROPERTIES SYMBOLIC TRUE)
+            set(COMMANDS ${COMMANDS} ${ARGS_NAME}/${FILE})
+          endif()
         endforeach()
         add_custom_target(
           ${ARGS_NAME}
@@ -139,6 +182,7 @@ function(add_on_source TARGET)
     endif()
   endif()
 endfunction()
+
 
 function(add_cpp_tools TARGET)
   set(CPP_TARGETS)
@@ -194,31 +238,73 @@ function(add_cpp_tools TARGET)
   endif()
 endfunction()
 
-function(get_git_version RESULT_NAME)
+
+function(add_git_version TARGET)
+  cmake_parse_arguments(ARGS "WITH_DIFF" "FALLBACK_VERSION;DPREFIX;DIFF_VAR" "" ${ARGN})
+  if(NOT ARGS_FALLBACK_VERSION)
+    set(ARGS_FALLBACK_VERSION "UNKNOWN")
+  endif()
+  if(NOT ARGS_DPREFIX)
+    string(MAKE_C_IDENTIFIER "${TARGET}" ARGS_DPREFIX)
+    string(TOUPPER ${ARGS_DPREFIX} ARGS_DPREFIX)
+  endif()
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h
+    "#ifndef ${ARGS_DPREFIX}_VERSION_H\n"
+    "#define ${ARGS_DPREFIX}_VERSION_H\n"
+    "#define ${ARGS_DPREFIX}_VERSION \"${ARGS_FALLBACK_VERSION}\"\n"
+    "#endif")
+  if(NOT ARGS_DIFF_VAR)
+    string(TOLOWER ${ARGS_DPREFIX}_git_diff ARGS_DIFF_VAR)
+  endif()
   if(EXISTS "${CMAKE_SOURCE_DIR}/.git" AND IS_DIRECTORY "${CMAKE_SOURCE_DIR}/.git")
-    cmake_parse_arguments(ARGS "" "DIFF_OUTPUT_VARIABLE;DIFF_HASH_OUTPUT_VARIABLE" "" ${ARGN})
     find_program(HAVE_GIT git)
     mark_as_advanced(HAVE_GIT)
     if(HAVE_GIT)
-      execute_process(
-        COMMAND git describe --tags --dirty --always
-        OUTPUT_VARIABLE GIT_OUTPUT
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-      string(REGEX REPLACE "^v([0-9]+\\.[0-9]+)\\.(0-)?([0-9]*)((-.+)?)$" "\\1.\\3\\4" GIT_OUTPUT "${GIT_OUTPUT}")
-      set(${RESULT_NAME} ${GIT_OUTPUT} PARENT_SCOPE)
-      if(ARGS_DIFF_OUTPUT_VARIABLE)
-        message(STATUS "${ARGS_DIFF_OUTPUT_VARIABLE}") # TODO
-        execute_process(
-          COMMAND git diff HEAD --no-color
-          OUTPUT_VARIABLE GIT_DIFF
-          OUTPUT_STRIP_TRAILING_WHITESPACE)
-        set(${ARGS_DIFF_OUTPUT_VARIABLE} ${GIT_DIFF} PARENT_SCOPE)
-        if(GIT_DIFF AND ARGS_DIFF_HASH_OUTPUT_VARIABLE)
-          string(MD5 GIT_DIFF_HASH "${GIT_DIFF}")
-          string(SUBSTRING "${GIT_DIFF_HASH}" 0 12 GIT_DIFF_HASH)
-          set(${ARGS_DIFF_HASH_OUTPUT_VARIABLE} ${GIT_DIFF_HASH} PARENT_SCOPE)
-        endif()
+
+      #add_custom_target(${TARGET}_version ALL
+      #  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h)
+
+      #add_custom_command(
+      #  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h
+      #  COMMAND ${CMAKE_COMMAND}
+      #  -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+      #  -DARGS_DIFF_VAR=${ARGS_DIFF_VAR}
+      #  -DARGS_DPREFIX=${ARGS_DPREFIX}
+      #  -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+      #  -DARGS_WITH_DIFF=${ARGS_WITH_DIFF}
+      #  -P ${HELPER_MODULES_PATH}/git_version.cmake)
+
+      add_custom_target(${TARGET}_version ALL
+        COMMAND ${CMAKE_COMMAND}
+        -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+        -DARGS_DIFF_VAR=${ARGS_DIFF_VAR}
+        -DARGS_DPREFIX=${ARGS_DPREFIX}
+        -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+        -DARGS_WITH_DIFF=${ARGS_WITH_DIFF}
+        -P ${HELPER_MODULES_PATH}/git_version.cmake)
+
+      set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h
+        PROPERTIES GENERATED TRUE
+        HEADER_FILE_ONLY TRUE)
+
+      target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/git_version)
+
+      add_dependencies(${TARGET} ${TARGET}_version)
+
+      if(ARGS_WITH_DIFF)
+        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp
+          "const char* ${ARGS_DIFF_VAR} = \"UNKNOWN\";\n")
+        set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp
+          PROPERTIES GENERATED TRUE)
       endif()
+
     endif()
+  endif()
+  if(ARGS_WITH_DIFF)
+    if(NOT HAVE_GIT)
+      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp
+        "const char* ${ARGS_DIFF_VAR} = \"\";\n")
+    endif()
+    target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp)
   endif()
 endfunction()
