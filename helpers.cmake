@@ -14,7 +14,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 set(HELPER_MODULES_PATH ${CMAKE_CURRENT_LIST_DIR})
-
+include(CMakeParseArguments)
 
 function(set_advanced_cpp_warnings TARGET)
   if(ARGN GREATER 1)
