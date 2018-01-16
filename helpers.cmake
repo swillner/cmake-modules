@@ -17,6 +17,18 @@ set(HELPER_MODULES_PATH ${CMAKE_CURRENT_LIST_DIR})
 include(CMakeParseArguments)
 
 
+function(add_doxygen_documentation PATH TARGET)
+  find_package(Doxygen)
+  if(DOXYGEN_FOUND)
+    configure_file(${CMAKE_CURRENT_SOURCE_DIR}/${PATH}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/${PATH}/Doxyfile @ONLY)
+    add_custom_target(${TARGET}
+      ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/${PATH}/Doxyfile
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+      COMMENT "Generating documentation..." VERBATIM)
+  endif(DOXYGEN_FOUND)
+endfunction()
+
+
 function(set_advanced_cpp_warnings TARGET)
   if(ARGN GREATER 1)
     option(CXX_WARNINGS ON)
