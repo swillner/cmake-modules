@@ -66,6 +66,18 @@ function(set_build_type_specifics TARGET)
 endfunction()
 
 
+function(set_ccache_use)
+  find_program(CCACHE_FOUND ccache)
+  if(CCACHE_FOUND)
+    option(USE_CCACHE "Use ccache if available" ON)
+    if(USE_CCACHE)
+      set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+      set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    endif()
+  endif()
+endfunction()
+
+
 function(get_depends_properties RESULT_NAME TARGET PROPERTIES)
   foreach(PROPERTY ${PROPERTIES})
     set(RESULT_${PROPERTY})
