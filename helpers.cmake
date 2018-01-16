@@ -48,6 +48,8 @@ function(set_default_build_type BUILD_TYPE)
   if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE ${BUILD_TYPE} CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
   endif()
+  set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS} -pg")
+  set(CMAKE_EXE_LINKER_FLAGS_PROFILE "${CMAKE_EXE_LINKER_FLAGS} -pg")
 endfunction()
 
 
