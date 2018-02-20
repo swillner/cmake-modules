@@ -37,7 +37,7 @@ function(include_nlopt TARGET DEFAULT GIT_TAG)
     include(ExternalProject)
     ExternalProject_Add(nlopt
       GIT_REPOSITORY https://github.com/stevengj/nlopt.git
-      GIT_TAG ${ARGS_GIT_TAG}
+      GIT_TAG ${GIT_TAG}
       INSTALL_COMMAND ""
       CMAKE_ARGS
       -DBUILD_SHARED_LIBS=OFF
@@ -75,7 +75,7 @@ function(include_netcdf_cxx4 TARGET DEFAULT GIT_TAG)
     include(ExternalProject)
     ExternalProject_Add(netcdf_c++4
       GIT_REPOSITORY https://github.com/Unidata/netcdf-cxx4
-      GIT_TAG ${ARGS_GIT_TAG}
+      GIT_TAG ${GIT_TAG}
       INSTALL_COMMAND ""
       CMAKE_ARGS
       -DBUILD_SHARED_LIBS=OFF
@@ -104,7 +104,7 @@ function(include_yaml_cpp TARGET DEFAULT GIT_TAG)
     include(ExternalProject)
     ExternalProject_Add(yaml-cpp
       GIT_REPOSITORY https://github.com/jbeder/yaml-cpp
-      GIT_TAG ${ARGS_GIT_TAG}
+      GIT_TAG ${GIT_TAG}
       INSTALL_COMMAND ""
       CMAKE_ARGS
       -DBUILD_GMOCK=OFF
