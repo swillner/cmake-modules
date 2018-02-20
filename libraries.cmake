@@ -92,6 +92,37 @@ function(include_netcdf_cxx4 TARGET DEFAULT GIT_TAG)
   else()
     find_package(NETCDF_CPP4 REQUIRED)
     message(STATUS "NetCDF C++4 include directory: ${NETCDF_CPP4_INCLUDE_DIR}")
+    message(STATUS "NetCDF C++4 library: ${NETCDF_CPP4_LIBRARY}")
     target_link_libraries(${TARGET} netcdf_c++4)
+  endif()
+endfunction()
+
+
+function(include_yaml_cpp TARGET DEFAULT GIT_TAG)
+  option(INTERNAL_YAML_CPP "statically include yaml-cpp from git" ${DEFAULT})
+  if(INTERNAL_YAML_CPP)
+    include(ExternalProject)
+    ExternalProject_Add(yaml-cpp
+      GIT_REPOSITORY https://github.com/jbeder/yaml-cpp
+      GIT_TAG ${ARGS_GIT_TAG}
+      INSTALL_COMMAND ""
+      CMAKE_ARGS
+      -DBUILD_GMOCK=OFF
+      -DCMAKE_BUILD_TYPE=Release
+      -DYAML_CPP_BUILD_CONTRIB=OFF
+      -DYAML_CPP_BUILD_TESTS=OFF
+      -DYAML_CPP_BUILD_TOOLS=OFF
+      )
+    ExternalProject_Get_Property(yaml-cpp SOURCE_DIR)
+    include_directories(${SOURCE_DIR}/include)
+    add_dependencies(${TARGET} yaml-cpp)
+    ExternalProject_Get_Property(yaml-cpp BINARY_DIR)
+    message(STATUS "Including yaml-cpp from git")
+    target_link_libraries(${TARGET} ${BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX})
+  else()
+    find_package(YAML_CPP REQUIRED)
+    message(STATUS "yaml-cpp include directory: ${YAML_CPP_INCLUDE_DIR}")
+    message(STATUS "yaml-cpp library: ${YAML_CPP_LIBRARY}")
+    target_link_libraries(${TARGET} yaml-cpp)
   endif()
 endfunction()
