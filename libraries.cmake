@@ -13,8 +13,6 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-include(CMakeParseArguments)
-
 
 function(include_custom_library NAME HEADER_FILE)
   include(FindPackageHandleStandardArgs)
@@ -33,11 +31,7 @@ function(include_custom_library NAME HEADER_FILE)
 endfunction()
 
 
-function(include_nlopt TARGET DEFAULT)
-  cmake_parse_arguments(ARGS "" "GIT_TAG" "" ${ARGN})
-  if(NOT ARGS_GIT_TAG)
-    set(ARGS_GIT_TAG 34fd7ce)
-  endif()
+function(include_nlopt TARGET DEFAULT GIT_TAG)
   option(INTERNAL_NLOPT "statically include NLopt from git" ${DEFAULT})
   if(INTERNAL_NLOPT)
     include(ExternalProject)
@@ -46,14 +40,15 @@ function(include_nlopt TARGET DEFAULT)
       GIT_TAG ${ARGS_GIT_TAG}
       INSTALL_COMMAND ""
       CMAKE_ARGS
-      -DNLOPT_CXX=OFF
       -DBUILD_SHARED_LIBS=OFF
-      -DNLOPT_PYTHON=OFF
-      -DNLOPT_OCTAVE=OFF
-      -DNLOPT_MATLAB=OFF
+      -DCMAKE_BUILD_TYPE=Release
+      -DNLOPT_CXX=OFF
       -DNLOPT_GUILE=OFF
-      -DNLOPT_SWIG=OFF
       -DNLOPT_LINK_PYTHON=OFF
+      -DNLOPT_MATLAB=OFF
+      -DNLOPT_OCTAVE=OFF
+      -DNLOPT_PYTHON=OFF
+      -DNLOPT_SWIG=OFF
       )
     ExternalProject_Get_Property(nlopt SOURCE_DIR)
     include_directories(${SOURCE_DIR}/include)
@@ -65,16 +60,16 @@ function(include_nlopt TARGET DEFAULT)
     find_package(NLOPT REQUIRED)
     message(STATUS "NLopt include directory: ${NLOPT_INCLUDE_DIR}")
     message(STATUS "NLopt library: ${NLOPT_LIBRARY}")
-    target_link_libraries(acclimate nlopt)
+    target_link_libraries(${TARGET} nlopt)
   endif()
 endfunction()
 
 
-function(include_netcdf_cxx4 TARGET DEFAULT)
-  cmake_parse_arguments(ARGS "" "GIT_TAG" "" ${ARGN})
-  if(NOT ARGS_GIT_TAG)
-    set(ARGS_GIT_TAG v4.3.0)
-  endif()
+function(include_netcdf_cxx4 TARGET DEFAULT GIT_TAG)
+  find_package(NETCDF REQUIRED)
+  message(STATUS "NetCDF include directory: ${NETCDF_INCLUDE_DIR}")
+  message(STATUS "NetCDF library: ${NETCDF_LIBRARY}")
+  target_link_libraries(${TARGET} netcdf)
   option(INTERNAL_NETCDF_CXX "statically include NetCDF C++4 from git" ${DEFAULT})
   if(INTERNAL_NETCDF_CXX)
     include(ExternalProject)
@@ -83,8 +78,8 @@ function(include_netcdf_cxx4 TARGET DEFAULT)
       GIT_TAG ${ARGS_GIT_TAG}
       INSTALL_COMMAND ""
       CMAKE_ARGS
-      -DBUILD_TESTING=OFF
       -DBUILD_SHARED_LIBS=OFF
+      -DBUILD_TESTING=OFF
       -DCMAKE_BUILD_TYPE=Release
       -DNCXX_ENABLE_TESTS=OFF
       )
