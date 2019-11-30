@@ -55,12 +55,13 @@ function(include_nlopt TARGET DEFAULT GIT_TAG)
         -DBUILD_SHARED_LIBS=OFF
         -DCMAKE_BUILD_TYPE=Release
         -DNLOPT_CXX=OFF
+        -DNLOPT_FORTRAN=OFF
         -DNLOPT_GUILE=OFF
-        -DNLOPT_LINK_PYTHON=OFF
         -DNLOPT_MATLAB=OFF
         -DNLOPT_OCTAVE=OFF
         -DNLOPT_PYTHON=OFF
         -DNLOPT_SWIG=OFF
+        -DNLOPT_TESTS=OFF
         )
       message(STATUS "Including NLopt from GitHub")
     endif()
