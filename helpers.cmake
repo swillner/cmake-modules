@@ -348,52 +348,71 @@ function(add_cpp_tools TARGET)
 endfunction()
 
 function(add_git_version TARGET)
-  cmake_parse_arguments(ARGS "WITH_DIFF" "FALLBACK_VERSION;DPREFIX;DIFF_VAR" "" ${ARGN})
-  if(NOT ARGS_FALLBACK_VERSION)
-    set(ARGS_FALLBACK_VERSION "UNKNOWN")
-  endif()
+  cmake_parse_arguments(ARGS "" "DPREFIX;FALLBACK_VERSION;NAMESPACE" "" ${ARGN})
   if(NOT ARGS_DPREFIX)
     string(MAKE_C_IDENTIFIER "${TARGET}" ARGS_DPREFIX)
     string(TOUPPER ${ARGS_DPREFIX} ARGS_DPREFIX)
   endif()
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h
-       "#ifndef ${ARGS_DPREFIX}_VERSION_H\n" "#define ${ARGS_DPREFIX}_VERSION_H\n"
-       "#define ${ARGS_DPREFIX}_VERSION \"${ARGS_FALLBACK_VERSION}\"\n" "#endif"
-  )
-  target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/git_version)
-  if(NOT ARGS_DIFF_VAR)
-    string(TOLOWER ${ARGS_DPREFIX}_git_diff ARGS_DIFF_VAR)
+  if(NOT ARGS_NAMESPACE)
+    string(MAKE_C_IDENTIFIER "${TARGET}" ARGS_NAMESPACE)
+    string(TOLOWER ${ARGS_NAMESPACE} ARGS_NAMESPACE)
   endif()
+
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/include/version.h "\
+#ifndef ${ARGS_DPREFIX}_VERSION_H
+#define ${ARGS_DPREFIX}_VERSION_H
+
+namespace ${ARGS_NAMESPACE} {
+
+extern const char* version;
+extern const char* git_diff;
+constexpr bool has_diff = false;
+
+}  // namespace ${ARGS_NAMESPACE}
+
+#endif"
+    )
+  set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/include/version.h
+    PROPERTIES GENERATED TRUE
+    HEADER_FILE_ONLY TRUE)
+  target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
+
+  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp "\
+namespace ${ARGS_NAMESPACE} {
+
+const char* version = \"${ARGS_FALLBACK_VERSION}\";
+const char* git_diff = \"\";
+
+}  // namespace ${ARGS_NAMESPACE}
+"
+    )
+  set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp PROPERTIES GENERATED TRUE)
+  target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp)
+
   if(EXISTS "${CMAKE_SOURCE_DIR}/.git" AND IS_DIRECTORY "${CMAKE_SOURCE_DIR}/.git")
     find_program(HAVE_GIT git)
     mark_as_advanced(HAVE_GIT)
     if(HAVE_GIT)
-
       add_custom_target(
         ${TARGET}_version ALL
         COMMAND
-          ${CMAKE_COMMAND} -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR} -DARGS_DIFF_VAR=${ARGS_DIFF_VAR}
-          -DARGS_DPREFIX=${ARGS_DPREFIX} -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-          -DARGS_WITH_DIFF=${ARGS_WITH_DIFF} -P ${HELPER_MODULES_PATH}/git_version.cmake
+          ${CMAKE_COMMAND}
+          -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+          -DARGS_DPREFIX=${ARGS_DPREFIX}
+          -DARGS_NAMESPACE=${ARGS_NAMESPACE}
+          -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
+          -P
+          ${HELPER_MODULES_PATH}/git_version.cmake
       )
-
-      set_source_files_properties(
-        ${CMAKE_CURRENT_BINARY_DIR}/git_version/version.h PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE
-      )
-
       add_dependencies(${TARGET} ${TARGET}_version)
-
-      if(ARGS_WITH_DIFF)
-        file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp "const char* ${ARGS_DIFF_VAR} = \"UNKNOWN\";\n")
-        set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp PROPERTIES GENERATED TRUE)
+    else()
+      if(NOT ARGS_FALLBACK_VERSION)
+        message(FATAL_ERROR "Could not get version: Git not found")
       endif()
-
     endif()
-  endif()
-  if(ARGS_WITH_DIFF)
-    if(NOT HAVE_GIT)
-      file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp "const char* ${ARGS_DIFF_VAR} = \"\";\n")
+  else()
+    if(NOT ARGS_FALLBACK_VERSION)
+      message(FATAL_ERROR "Could not get version: Not in a git repository")
     endif()
-    target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/git_version/diff.cpp)
   endif()
 endfunction()
