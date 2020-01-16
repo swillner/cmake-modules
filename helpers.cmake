@@ -268,6 +268,11 @@ function(add_on_source TARGET)
 endfunction()
 
 function(add_cpp_tools TARGET)
+  cmake_parse_arguments(ARGS "" "STD" "" ${ARGN})
+  if(NOT ARGS_STD)
+    set(ARGS_STD "c++11")
+  endif()
+
   set(CPP_TARGETS)
 
   add_on_source(
@@ -284,7 +289,7 @@ function(add_cpp_tools TARGET)
     ${TARGET}
     NAME ${TARGET}_clang_tidy
     COMMAND clang-tidy
-    ARGUMENTS -quiet SOURCEFILE -- -std=c++11 INCLUDES DEFINITIONS
+    ARGUMENTS -quiet SOURCEFILE -- -std=${ARGS_STD} INCLUDES DEFINITIONS
   )
   if(TARGET ${TARGET}_clang_tidy)
     set(CPP_TARGETS ${CPP_TARGETS} ${TARGET}_clang_tidy)
@@ -298,7 +303,7 @@ function(add_cpp_tools TARGET)
                 -format-style=file
                 SOURCEFILE
                 --
-                -std=c++11
+                -std=${ARGS_STD}
                 INCLUDES
                 DEFINITIONS
     )
