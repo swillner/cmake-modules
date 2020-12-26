@@ -46,14 +46,27 @@ function(include_custom_library NAME HEADER_FILE)
   endif()
 endfunction()
 
-function(include_nlopt TARGET DEFAULT GIT_TAG)
+function(include_nlopt TARGET DEFAULT)
+  include(CMakeParseArguments)
+  cmake_parse_arguments(ARGS "" "GIT_TAG;SOURCE_DIR" "" ${ARGN})
   option(INTERNAL_NLOPT "statically include NLopt from GitHub" ${DEFAULT})
   if(INTERNAL_NLOPT)
     include(ExternalProject)
+    if(ARGS_GIT_TAG)
+      set(GIT_REPOSITORY https://github.com/stevengj/nlopt.git)
+      message(STATUS "Including NLopt from GitHub")
+    else()
+      if(ARGS_SOURCE_DIR)
+        set(ARGS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${ARGS_SOURCE_DIR})
+      else()
+        message(FATAL_ERROR "Provide GIT_TAG or SOURCE_DIR")
+      endif()
+    endif()
     if(NOT TARGET nlopt)
       externalproject_add(
         nlopt
-        GIT_REPOSITORY https://github.com/stevengj/nlopt.git
+        SOURCE_DIR ${ARGS_SOURCE_DIR}
+        GIT_REPOSITORY ${GIT_REPOSITORY}
         GIT_TAG ${GIT_TAG}
         INSTALL_COMMAND ""
         CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
@@ -67,7 +80,6 @@ function(include_nlopt TARGET DEFAULT GIT_TAG)
                    -DNLOPT_SWIG=OFF
                    -DNLOPT_TESTS=OFF
       )
-      message(STATUS "Including NLopt from GitHub")
     endif()
     externalproject_get_property(nlopt SOURCE_DIR)
     externalproject_get_property(nlopt BINARY_DIR)
@@ -84,24 +96,35 @@ function(include_nlopt TARGET DEFAULT GIT_TAG)
   endif()
 endfunction()
 
-function(include_netcdf_cxx4 TARGET DEFAULT GIT_TAG)
+function(include_netcdf_cxx4 TARGET DEFAULT)
   find_package(NETCDF REQUIRED)
   message(STATUS "NetCDF include directory: ${NETCDF_INCLUDE_DIR}")
   message(STATUS "NetCDF library: ${NETCDF_LIBRARY}")
+  include(CMakeParseArguments)
+  cmake_parse_arguments(ARGS "" "GIT_TAG;SOURCE_DIR" "" ${ARGN})
   option(INTERNAL_NETCDF_CXX "statically include NetCDF C++4 from GitHub" ${DEFAULT})
   if(INTERNAL_NETCDF_CXX)
     include(ExternalProject)
+    if(ARGS_GIT_TAG)
+      set(GIT_REPOSITORY https://github.com/Unidata/netcdf-cxx4)
+      message(STATUS "Including NetCDF C++4 from GitHub")
+    else()
+      if(ARGS_SOURCE_DIR)
+        set(ARGS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${ARGS_SOURCE_DIR})
+      else()
+        message(FATAL_ERROR "Provide GIT_TAG or SOURCE_DIR")
+      endif()
+    endif()
     if(NOT TARGET netcdf_c++4)
       string(REPLACE ";" "$<SEMICOLON>" CMAKE_LIBRARY_PATH_STR "${CMAKE_LIBRARY_PATH}")
       externalproject_add(
         netcdf_c++4
-        GIT_REPOSITORY https://github.com/Unidata/netcdf-cxx4
-        GIT_TAG ${GIT_TAG}
+        SOURCE_DIR ${ARGS_SOURCE_DIR}
+        GIT_REPOSITORY ${GIT_REPOSITORY}
         INSTALL_COMMAND ""
         CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release -DNCXX_ENABLE_TESTS=OFF
                    -DCMAKE_LIBRARY_PATH=${CMAKE_LIBRARY_PATH_STR}
       )
-      message(STATUS "Including NetCDF C++4 from GitHub")
     endif()
     externalproject_get_property(netcdf_c++4 SOURCE_DIR)
     externalproject_get_property(netcdf_c++4 BINARY_DIR)
@@ -119,20 +142,32 @@ function(include_netcdf_cxx4 TARGET DEFAULT GIT_TAG)
   target_link_libraries(${TARGET} PRIVATE netcdf)
 endfunction()
 
-function(include_yaml_cpp TARGET DEFAULT GIT_TAG)
+function(include_yaml_cpp TARGET DEFAULT)
+  include(CMakeParseArguments)
+  cmake_parse_arguments(ARGS "" "GIT_TAG;SOURCE_DIR" "" ${ARGN})
   option(INTERNAL_YAML_CPP "statically include yaml-cpp from GitHub" ${DEFAULT})
   if(INTERNAL_YAML_CPP)
     include(ExternalProject)
+    if(ARGS_GIT_TAG)
+      set(GIT_REPOSITORY https://github.com/jbeder/yaml-cpp)
+      message(STATUS "Including yaml-cpp from GitHub")
+    else()
+      if(ARGS_SOURCE_DIR)
+        set(ARGS_SOURCE_DIR ${CMAKE_SOURCE_DIR}/${ARGS_SOURCE_DIR})
+      else()
+        message(FATAL_ERROR "Provide GIT_TAG or SOURCE_DIR")
+      endif()
+    endif()
     if(NOT TARGET yaml-cpp)
       externalproject_add(
         yaml-cpp
-        GIT_REPOSITORY https://github.com/jbeder/yaml-cpp
-        GIT_TAG ${GIT_TAG}
+        SOURCE_DIR ${ARGS_SOURCE_DIR}
+        GIT_REPOSITORY ${GIT_REPOSITORY}
+        GIT_TAG ${ARGS_GIT_TAG}
         INSTALL_COMMAND ""
         CMAKE_ARGS -DCMAKE_BUILD_TYPE=Release -DYAML_BUILD_SHARED_LIBS=OFF -DYAML_CPP_BUILD_CONTRIB=OFF
                    -DYAML_CPP_BUILD_TESTS=OFF -DYAML_CPP_BUILD_TOOLS=OFF
       )
-      message(STATUS "Including yaml-cpp from GitHub")
     endif()
     externalproject_get_property(yaml-cpp SOURCE_DIR)
     externalproject_get_property(yaml-cpp BINARY_DIR)
