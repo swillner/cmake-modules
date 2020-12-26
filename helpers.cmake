@@ -363,7 +363,9 @@ function(add_git_version TARGET)
     string(TOLOWER ${ARGS_NAMESPACE} ARGS_NAMESPACE)
   endif()
 
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/include/version.h "\
+  file(
+    WRITE ${CMAKE_CURRENT_BINARY_DIR}/include/version.h
+    "\
 #ifndef ${ARGS_DPREFIX}_VERSION_H
 #define ${ARGS_DPREFIX}_VERSION_H
 
@@ -376,13 +378,15 @@ constexpr bool has_diff = false;
 }  // namespace ${ARGS_NAMESPACE}
 
 #endif"
-    )
-  set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/include/version.h
-    PROPERTIES GENERATED TRUE
-    HEADER_FILE_ONLY TRUE)
+  )
+  set_source_files_properties(
+    ${CMAKE_CURRENT_BINARY_DIR}/include/version.h PROPERTIES GENERATED TRUE HEADER_FILE_ONLY TRUE
+  )
   target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/include)
 
-  file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp "\
+  file(
+    WRITE ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp
+    "\
 namespace ${ARGS_NAMESPACE} {
 
 const char* version = \"${ARGS_FALLBACK_VERSION}\";
@@ -390,7 +394,7 @@ const char* git_diff = \"\";
 
 }  // namespace ${ARGS_NAMESPACE}
 "
-    )
+  )
   set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp PROPERTIES GENERATED TRUE)
   target_sources(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp)
 
@@ -401,12 +405,8 @@ const char* git_diff = \"\";
       add_custom_target(
         ${TARGET}_version ALL
         COMMAND
-          ${CMAKE_COMMAND}
-          -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
-          -DARGS_DPREFIX=${ARGS_DPREFIX}
-          -DARGS_NAMESPACE=${ARGS_NAMESPACE}
-          -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
-          -P
+          ${CMAKE_COMMAND} -DARGS_BINARY_DIR=${CMAKE_CURRENT_BINARY_DIR} -DARGS_DPREFIX=${ARGS_DPREFIX}
+          -DARGS_NAMESPACE=${ARGS_NAMESPACE} -DARGS_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -P
           ${HELPER_MODULES_PATH}/git_version.cmake
       )
       add_dependencies(${TARGET} ${TARGET}_version)

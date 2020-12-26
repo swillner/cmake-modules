@@ -21,13 +21,12 @@ execute_process(
 )
 string(REGEX REPLACE "^v([0-9]+\\.[0-9]+)\\.(0-)?([0-9]*)((-.+)?)$" "\\1.\\3\\4" GIT_VERSION "${GIT_OUTPUT}")
 
-
 execute_process(
   COMMAND git diff HEAD --no-color
   WORKING_DIRECTORY ${ARGS_SOURCE_DIR}
   OUTPUT_VARIABLE GIT_DIFF
   OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
+)
 if(GIT_DIFF)
   string(MD5 GIT_DIFF_HASH "${GIT_DIFF}")
   string(SUBSTRING "${GIT_DIFF_HASH}" 0 12 GIT_DIFF_HASH)
@@ -38,7 +37,9 @@ else()
   set(GIT_DIFF "\"\"")
 endif()
 
-file(WRITE ${ARGS_BINARY_DIR}/include/version.h.new "\
+file(
+  WRITE ${ARGS_BINARY_DIR}/include/version.h.new
+  "\
 #ifndef ${ARGS_DPREFIX}_VERSION_H
 #define ${ARGS_DPREFIX}_VERSION_H
 
@@ -52,13 +53,15 @@ constexpr bool has_diff = ${HAS_DIFF};
 
 #endif
 "
-  )
+)
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ARGS_BINARY_DIR}/include/version.h.new
           ${ARGS_BINARY_DIR}/include/version.h
 )
 
-file(WRITE ${ARGS_BINARY_DIR}/src/version.cpp.new "\
+file(
+  WRITE ${ARGS_BINARY_DIR}/src/version.cpp.new
+  "\
 namespace ${ARGS_NAMESPACE} {
 
 const char* version = \"${GIT_VERSION}\";
@@ -66,7 +69,7 @@ const char* git_diff = ${GIT_DIFF};
 
 }  // namespace ${ARGS_NAMESPACE}
 "
-  )
+)
 execute_process(
   COMMAND ${CMAKE_COMMAND} -E copy_if_different ${ARGS_BINARY_DIR}/src/version.cpp.new
           ${ARGS_BINARY_DIR}/src/version.cpp
