@@ -83,7 +83,7 @@ function(include_nlopt TARGET DEFAULT)
     endif()
     externalproject_get_property(nlopt SOURCE_DIR)
     externalproject_get_property(nlopt BINARY_DIR)
-    include_directories(${BINARY_DIR}/src/api)
+    include_directories(${SOURCE_DIR}/src/api)
     add_dependencies(${TARGET} nlopt)
     target_link_libraries(
       ${TARGET} PRIVATE ${BINARY_DIR}/${CMAKE_STATIC_LIBRARY_PREFIX}nlopt${CMAKE_STATIC_LIBRARY_SUFFIX}
