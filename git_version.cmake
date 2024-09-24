@@ -45,9 +45,11 @@ file(
 
 namespace ${ARGS_NAMESPACE} {
 
-extern const char* version;
-extern const char* git_diff;
-constexpr bool has_diff = ${HAS_DIFF};
+struct Version {
+    static const char* const version;
+    static const char* const git_diff;
+    static constexpr bool has_diff = ${HAS_DIFF};
+};
 
 }  // namespace ${ARGS_NAMESPACE}
 
@@ -62,10 +64,12 @@ execute_process(
 file(
   WRITE ${ARGS_BINARY_DIR}/src/version.cpp.new
   "\
+#include \"../include/version.h\"
+
 namespace ${ARGS_NAMESPACE} {
 
-const char* version = \"${GIT_VERSION}\";
-const char* git_diff = ${GIT_DIFF};
+const char* const Version::version = \"${GIT_VERSION}\";
+const char* const Version::git_diff = ${GIT_DIFF};
 
 }  // namespace ${ARGS_NAMESPACE}
 "

@@ -371,9 +371,11 @@ function(add_git_version TARGET)
 
 namespace ${ARGS_NAMESPACE} {
 
-extern const char* version;
-extern const char* git_diff;
-constexpr bool has_diff = false;
+struct Version {
+    static const char* const version;
+    static const char* const git_diff;
+    static constexpr bool has_diff = false;
+};
 
 }  // namespace ${ARGS_NAMESPACE}
 
@@ -387,10 +389,12 @@ constexpr bool has_diff = false;
   file(
     WRITE ${CMAKE_CURRENT_BINARY_DIR}/src/version.cpp
     "\
+#include \"../include/version.h\"
+
 namespace ${ARGS_NAMESPACE} {
 
-const char* version = \"${ARGS_FALLBACK_VERSION}\";
-const char* git_diff = \"\";
+const char* const Version::version = \"${ARGS_FALLBACK_VERSION}\";
+const char* const Version::git_diff = \"\";
 
 }  // namespace ${ARGS_NAMESPACE}
 "
