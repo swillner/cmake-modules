@@ -67,7 +67,7 @@ function(include_nlopt TARGET DEFAULT)
         nlopt
         SOURCE_DIR ${ARGS_SOURCE_DIR}
         GIT_REPOSITORY ${GIT_REPOSITORY}
-        GIT_TAG ${GIT_TAG}
+        GIT_TAG ${ARGS_GIT_TAG}
         INSTALL_COMMAND ""
         CMAKE_ARGS -DBUILD_SHARED_LIBS=OFF
                    -DCMAKE_BUILD_TYPE=Release
