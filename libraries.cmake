@@ -78,6 +78,7 @@ function(include_nlopt TARGET DEFAULT)
                    -DNLOPT_OCTAVE=OFF
                    -DNLOPT_PYTHON=OFF
                    -DNLOPT_SWIG=OFF
+                   -DNLOPT_JAVA=OFF
                    -DNLOPT_TESTS=OFF
       )
     endif()
